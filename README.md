@@ -1,7 +1,9 @@
 # OPA Bots Custom Component
+Credit for original version of the custom component to ...
 andrew.e.higginbottom@oracle.com - 5 April 2019
 
-some additional work 
+Current owner of GitHub Repository 
+phil.whitwell@oracle.com
 
 This custom component connects to the Oracle Policy Automation Chat API to give your Digital Assistants the ability to conduct OPA interviews with customers.
 
@@ -10,7 +12,7 @@ These instructions assume deployment to the Oracle Digital Assistant Embedded Co
 PREREQUISITES: You need to have node.js installed.
 
 ## Expand the OPA Custom Component for ODA
-- Expand the opa-oda-chat_XYZ.zip folder.
+- Download the source from Github https://github.com/oracle/opa-oda-chatgit 
 
 ## Install the Oracle Bots Node SDK
 - Open a command prompt in the expanded zip folder.
