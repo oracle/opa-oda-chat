@@ -1,6 +1,6 @@
 /*
 * Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
-* The Universal Permissive License (UPL), Version 1.0
+* Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 */
 var OpaInterviewController = require('./OpaInterviewController.js')
 var OpaInterviewScreen = require('./OpaInterviewScreen.js')
@@ -270,12 +270,15 @@ function CoreOpaBot (configuration) {
       // add the question or offer to restart to the list of things to say
       if (screen.hasQuestion()) {
         var opts = screen.getQuestionOptions(message.interviewConfig)
-        var question = cob.formatQuestion(screen.getQuestion(), opts)
+        var header={headerText:""}
+        var question = cob.formatQuestion(screen.getQuestion(), opts, header,  message.interviewConfig.channel)
 
         session.set('state', 'question')
         session.set('question', { options: opts })
         session.set('screen', screen)
 
+        if (header.headerText!="")
+            comments.push(header.headerText)
         comments.push(question)
       } else {
         // wind up. Offer to restart, or just finish.
@@ -356,7 +359,7 @@ function CoreOpaBot (configuration) {
           message
         )
       ) {
-        if (screen.previousGoalState) {
+        if (screen.res.position>1) {
           resolve(ic.goBack(screen, message, session, cob.investigate))
         } else {
           screen.setGreeting([message.interviewConfig.backFail])
@@ -374,12 +377,12 @@ function CoreOpaBot (configuration) {
         )
         //PW really crap but test to see if attachment message by checking length, eventually this could be a check that it is an attach
         //ment control
-        if (input.length > 300){
+       /* if (input.length > 300){
           resolve(
             ic.getNextScreen(screen, message, session, cob.investigate)
           )
           return
-        }
+        }*/
 
 
 
@@ -684,7 +687,8 @@ function CoreOpaBot (configuration) {
     return ys.find(y => y.index === x)
   }
   cob.exactValueMatch = function (x, ys) {
-    return ys.find(y => y.value === x.toLowerCase())
+    var exactMatch=ys.find(y => y.value.toLowerCase() === x.toLowerCase())
+    return exactMatch
   }
   cob.exactCaptionMatch = function (x, ys) {
     // if there's one option containing the exact whole input, use it

@@ -1,6 +1,6 @@
 /*
 * Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
-* The Universal Permissive License (UPL), Version 1.0
+* Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 */
 module.exports = function (config, env) {
   // if (process.env.USE_SOAP_API == 'true') {

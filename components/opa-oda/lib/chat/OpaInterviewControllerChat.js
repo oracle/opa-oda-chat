@@ -1,6 +1,6 @@
 /*
 * Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
-* The Universal Permissive License (UPL), Version 1.0
+* Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 */
 var OpaInterviewScreen = require('./OpaInterviewScreenChat.js')
 var querystring = require('querystring')
@@ -222,52 +222,57 @@ OpaInterviewController.prototype = {
   //   })
   },
 
-  goBack: function (screen, message, session, investigateFn) {
-    // var ic = this
-    // return new Promise(function (resolve, reject) {
-    //   soap.createClient(ic.wsdlUrl, { WSDL_CACHE: ic.wsdlCache }, function (
-    //     err,
-    //     client
-    //   ) {
-    //     if (!err) {
-    //       ic.soapClient = client
-    //       ic.soapClient.addHttpHeader(
-    //         'Cookie',
-    //         session.opaCookie[ic.wsdlUrl].cookies
-    //       )
-    //       if (ic.wsdlSecurity) ic.soapClient.setSecurity(ic.wsdlSecurity)
-    //       var backRequest =
-    //         '<typ:investigate-request>' +
-    //         '<typ:goal-state>' +
-    //         screen.previousGoalState +
-    //         '</typ:goal-state>' +
-    //         '</typ:investigate-request>'
-    //       ic.soapClient.Investigate({ _xml: backRequest }, function (
-    //         err,
-    //         result,
-    //         raw
-    //       ) {
-    //         if (!err) {
-    //           investigateFn(
-    //             session,
-    //             ic,
-    //             new OpaInterviewScreen(result, raw),
-    //             message
-    //           ).then(function () {
-    //             resolve()
-    //           })
-    //         } else {
-    //           ic.log.error('Error getting previous screen.')
-    //           ic.log.error(err)
-    //         }
-    //       })
-    //     } else {
-    //       ic.log.error('Error creating SOAP client.')
-    //       ic.log.error(err)
-    //     }
-    //   })
-    // })
-  },
+  goBack: function (screen, input, session, investigateFn, redirectUrlPath) {
+      var ic = this
+      ic.oAuthToken = session.get('authToken')
+      return new Promise(function (resolve, reject) {
+        var undoBody = {
+          operation: 'undo',
+          position: screen.res.position -1
+        }
+        ic.log.trace(JSON.stringify(undoBody, null, 2))
+        const parsedUrl = url.parse(session.get('investigateUrl'))
+        const req = https.request({
+          hostname: parsedUrl.host,
+          path: redirectUrlPath || parsedUrl.pathname,
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + ic.oAuthToken.access_token,
+            cookie: session.opaCookie.map(c => {
+              const cParts = c.split(';')[0].split('=')
+              return querystring.stringify({ [cParts[0]]: cParts[1] })
+            }).join('; ')
+          }
+        },
+        (res) => {
+          let body = ''
+          res.on('data', data => {
+            body += data
+          })
+          res.on('end', () => {
+            if (res.statusCode === 307) {
+              resolve(ic.goBack(screen, input, session, investigateFn, res.headers.location))
+            } else {
+              ic.log.trace(JSON.stringify(body, null, 2))
+              resolve(
+                investigateFn(
+                  session,
+                  ic,
+                  new OpaInterviewScreen(JSON.parse(body), ic.env, ic.log),
+                  input
+                )
+              )
+            }
+          })
+        })
+        req.on('error', (e) => {
+          ic.log.error('Failed to get previous screen with undo')
+          reject(e)
+        })
+        req.write(JSON.stringify(undoBody))
+        req.end()
+      })
+    },
 
   convertDataType: function (input, control, utterances) {
     if (control.type === 'currency' || control.type === 'number') {

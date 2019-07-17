@@ -1,6 +1,6 @@
 /*
 * Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
-* The Universal Permissive License (UPL), Version 1.0
+* Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 */
 var CoreOpaBot = require('./core_opa_bot.js')
 const https = require('https')
@@ -211,7 +211,7 @@ function IBOPABot (configuration) {
   }
 */
 
-ibBot.formatQuestion = function (question, opts) {
+ibBot.formatQuestion = function (question, opts, header, channel) {
 
   //crap handling if there is no question text
   if (question.text==="")
@@ -238,14 +238,13 @@ ibBot.formatQuestion = function (question, opts) {
     )
   }
   
-
-
   if (question. inputType === 'text-button-group' || question. inputType === 'text-image-button-group' || question.inputType === 'image-button-group' ||
     question.inputType === 'Dropdown' || question.inputType === 'searching-combo' || question.inputType === 'Radiobutton' )
   {
     //var qrMsg = MessageModel.textConversationMessage(question.text)
     //var cardMsg = ibBot.formatQuestionTextAndImage(question, opts)
-    return ibBot.formatQuestionTextAndImage(question, opts)
+    header.headerText=question.text
+    return ibBot.formatQuestionTextAndImage(question, opts, channel)
   }
   else
   {
@@ -267,23 +266,26 @@ ibBot.formatQuestion = function (question, opts) {
 
   //return plainQuestion
 }
-  ibBot.formatQuestionTextAndImage = function (question, opts) {
+  ibBot.formatQuestionTextAndImage = function (question, opts, channel) {
     // carousel
     // ibBot.serveImages(opts)
-    
+    var orientation='horizontal'
+    if (channel==="facebook")
+        orientation='vertical'
+
     return MessageModel.cardConversationMessage( 
-      'vertical',
+      orientation,
       opts.map(o =>
         MessageModel.cardObject(
-          o.text,
+          o.value,
           null,
           o['uncheckedImageURL'],
           null,
-          [MessageModel.postbackActionObject(o.text, null, o.value)]
+          [MessageModel.postbackActionObject(o.text,null,o.value) ]
           
         )
-      ),[],
-       question.text
+      )//,[],
+       //question.text
     )
   }
 

@@ -1,12 +1,12 @@
 /*
 * Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
-* The Universal Permissive License (UPL), Version 1.0
+* Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 */
+var request = require("request").defaults({ encoding: null })
 var IBOPABot = require('./lib/ib_opa_bot.js')
-//var request = require("request").defaults({ encoding: null })
 var OdaSessionManager = require('./lib/OdaSessionManager.js')
 const Joi = require('joi')
-const https = require('https')
+// const https = require('https')
 var logger
 
 var ibOpaBot = new IBOPABot({
@@ -61,31 +61,32 @@ module.exports = {
       ibOpaBot,
       conversation
     )
-    var message
+    
+    var messagePromise
     if (
-      conversation.messagePayload().attachment &&
+      conversation.attachment() &&
       ['image', 'file'].find(
-        x => x === conversation.messagePayload().attachment.type.toLowerCase()
+        x => x === conversation.attachment().type.toLowerCase()
       )
     ) {
+      //temporarirly write out the channel
+      //conversation.request().message.channelConversation.type
       
-
-      /*const { url } = conversation.attachment();      
-      request.get(`${url}`, function (error, response, body) {
-
-        var replyMessage = "";
-        if (!error && response.statusCode == 200) {
-          var base64Val = new Buffer(body).toString('base64');
-          replyMessage = base64Val;
-          conversation.logger().info(replyMessage);
-        } else {
-          replyMessage = "Something wrong getting the picture with request.";
-          conversation.logger().error(replyMessage);
-        }
-         conversation.text()= {"name": "Uploaded", "data": replyMessage }
-      });*/
-
-     
+      messagePromise = new Promise((resolve, reject) => {
+        const { url } = conversation.attachment(); 
+        request.get(`${url}`, function (error, response, body) {
+          if (!error && response.statusCode == 200) {
+            var base64Val = new Buffer(body).toString('base64');
+            // conversation.logger().info("Base64 encoded image: " + base64Val);
+            var message = {"name": "Uploaded", "data": base64Val}
+            resolve(message);
+          } else if (error) {
+            reject(error);
+          } else {
+            reject("Cannot obtain the image from the url specified. Response status: " + response.statusCode);
+          }
+        });
+      });
 
       // they sent an image or a file
       /*message =
@@ -93,20 +94,34 @@ module.exports = {
         conversation.messagePayload().attachment.type +
         ': ' +
         conversation.messagePayload().attachment.url*/
-        
       //PW hardcode the message for now
-       message={"name": "Uploaded", "data":"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEBSURBVFhH7ZRNCsIwEIV7Da+jC0E9juLag+lJdKOeQFzoSt+TjoQaMpMfU4V+8C2SmXlJC23zz8zhuXXGjdqc4KP1yI3aHKBcYM+N2kygXGDMjT6QC/TG1y+wgFt4hXKYVc5wll9LEhvoC06RWVHwyTl4g0s4grFwZgXvkFlRb2IHOcTDc1lDZjHTzAVyKOXJuzCDWcw0wwFaiug834D27w/VTReQJlcX7d8fqsu+6wdaU7ULEF8TXysPYfiUGx1CdS37hakpEVO2qSkRU7apKRFTthRcBV/NohCqvQk1+WoWhVDNS7ep9FpFC8hdq2gBuWsVGSitGd9wCQcGfo2meQJUihUToDHCEgAAAABJRU5ErkJggg=="}
+      //message={"name": "Uploaded", "data":"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEBSURBVFhH7ZRNCsIwEIV7Da+jC0E9juLag+lJdKOeQFzoSt+TjoQaMpMfU4V+8C2SmXlJC23zz8zhuXXGjdqc4KP1yI3aHKBcYM+N2kygXGDMjT6QC/TG1y+wgFt4hXKYVc5wll9LEhvoC06RWVHwyTl4g0s4grFwZgXvkFlRb2IHOcTDc1lDZjHTzAVyKOXJuzCDWcw0wwFaiug834D27w/VTReQJlcX7d8fqsu+6wdaU7ULEF8TXysPYfiUGx1CdS37hakpEVO2qSkRU7apKRFTthRcBV/NohCqvQk1+WoWhVDNS7ep9FpFC8hdq2gBuWsVGSitGd9wCQcGfo2meQJUihUToDHCEgAAAABJRU5ErkJggg=="}
         
     } else if (conversation.messagePayload().location) {
       // they sent a location
-      message =
-        '__loc: ' +
-        conversation.messagePayload().location.latitude +
-        ',' +
-        conversation.messagePayload().location.longitude
+      messagePromise = new Promise((resolve, reject) => {
+        try {
+          var message =
+            '__loc: ' +
+            conversation.messagePayload().location.latitude +
+            ',' +
+            conversation.messagePayload().location.longitude;
+          resolve(message);
+        } catch (e) {
+          reject(e);
+        }
+      });
+
     } else {
       // it's a plain text message
-      message = conversation.text()
+      messagePromise = new Promise((resolve, reject) => {
+        try {
+          var message = conversation.text();
+          resolve(message);
+        } catch (e) {
+          reject(e);
+        }
+      });
     }
 
     const firstName = conversation.variable('profile.firstName')
@@ -230,31 +245,36 @@ module.exports = {
       conversation.reply(message)
       cb()
     }
-    logger.debug('OpaInterview: message = ' + message)
 
-    const msg = {
-      text: message,
-      user: user,
-      // 'channel': channel,
-      sessionId: interviewConfig.chatUrl, // (botId + '_' + sessionId),
-      interviewConfig: interviewConfig
-    }
+    messagePromise
+      .then((message) => {
+        logger.debug('OpaInterview: message = ' + message);
+        conversation.logger().info('OpaInterview: message = ' + message);
 
-    ibOpaBot
-      .handleMessage(msg, say)
-      .then((result) => {
-        logger.debug('handleMessage result: ' + result)
-        if (
-          result &&
-          (result === 'finished' || result === 'stopped' || result === 'cancel')
-        ) {
-          logger.debug('Transitioning to ' + result)
-          conversation.transition(result)
-          // conversation.keepTurn(true)
+        const msg = {
+          text: message,
+          user: user,
+          // 'channel': channel,
+          sessionId: interviewConfig.chatUrl, // (botId + '_' + sessionId),
+          interviewConfig: interviewConfig
         }
-        ibOpaBot.sessionManager.persist()
-        done()
-        // done(conversation)
+         msg.interviewConfig.channel=conversation.request().message.channelConversation.type
+        ibOpaBot
+          .handleMessage(msg, say)
+          .then((result) => {
+            logger.debug('handleMessage result: ' + result)
+            if (
+              result &&
+              (result === 'finished' || result === 'stopped' || result === 'cancel')
+            ) {
+              logger.debug('Transitioning to ' + result)
+              conversation.transition(result)
+              // conversation.keepTurn(true)
+            }
+            ibOpaBot.sessionManager.persist()
+            done()
+            // done(conversation)
+          });
       })
       .catch(e => {
         //  ibOpaBot.removeSnapshot(ibOpaBot.sessionManager.get(channel + '_' + sessionId), msg)
@@ -267,7 +287,7 @@ module.exports = {
         // conversation.keepTurn(true)
         done()
         // done(conversation)
-      })
+      });
   }
 }
 
