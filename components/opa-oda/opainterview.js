@@ -5,7 +5,7 @@
 var request = require("request").defaults({ encoding: null })
 var IBOPABot = require('./lib/ib_opa_bot.js')
 var OdaSessionManager = require('./lib/OdaSessionManager.js')
-const Joi = require('joi')
+// const Joi = require('joi')
 // const https = require('https')
 var logger
 
