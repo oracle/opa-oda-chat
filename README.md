@@ -1,4 +1,9 @@
-# OPA Bots Custom Component
+# OPA Bots Custom Component - NO LONGER ACTIVELY SUPPORTED
+The recent release in Oracle Digitial Assistant 20.12 of an Intelligent Advisor (OPA) system component means this custom approach will no longer be maintained.
+The code repository will remain for existing customers but new customers should not use.
+
+
+
 Credit for original version of the custom component to ...
 andrew.e.higginbottom@oracle.com - 5 April 2019
 
